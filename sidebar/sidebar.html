@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>IntelliWrite Sidebar</title>
+  <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+  <h2>🪄 IntelliWrite Assistant</h2>
+  <textarea id="input" placeholder="Type or paste text here..."></textarea>
+
+  <div id="actions">
+    <button data-action="summarize">Summarize</button>
+    <button data-action="rewrite">Rewrite</button>
+    <button data-action="proofread">Proofread</button>
+    <button data-action="translate">Translate</button>
+    <button data-action="write">Generate</button>
+    <button data-action="prompt">Explain</button>
+  </div>
+
+  <pre id="output"></pre>
+
+  <script src="sidebar.js"></script>
+</body>
+</html>
