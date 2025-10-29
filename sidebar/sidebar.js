@@ -1,142 +1,81 @@
-// const input = document.getElementById("input");
-// const output = document.getElementById("output");
+// ===============================
+// INTELLIWRITE – CHROME AI WRAPPER
+// ===============================
+const inputEl = document.getElementById("input");
+const outputEl = document.getElementById("output");
 
-// document.querySelectorAll("button").forEach(btn => {
-//   btn.addEventListener("click", async () => {
-//     const action = btn.getAttribute("data-action");
-//     const text = input.value.trim();
-//     if (!text) return alert("Enter some text first!");
-
-//     output.textContent = "⏳ Processing...";
-
-//     try {
-//       let result = "";
-//       switch (action) {
-//         case "summarize":
-//           result = await summarizeText(text);
-//           break;
-//         case "rewrite":
-//           result = await rewriteText(text);
-//           break;
-//         case "proofread":
-//           result = await proofreadText(text);
-//           break;
-//         case "translate":
-//           result = await translateText(text);
-//           break;
-//         case "write":
-//           result = await writeText(text);
-//           break;
-//         case "prompt":
-//           result = await explainText(text);
-//           break;
-//       }
-//       output.textContent = result;
-//     } catch (err) {
-//       output.textContent = "⚠️ Error: " + err.message;
-//     }
-//   });
-// });
-
-// // --- Placeholder Functions (we’ll replace with Chrome AI APIs) ---
-// async function summarizeText(text) {
-//   return "🧠 [Summary generated locally for]: " + text.slice(0, 50) + "...";
-// }
-
-// async function rewriteText(text) {
-//   return "✍️ [Rewritten version of your text]";
-// }
-
-// async function proofreadText(text) {
-//   return "✅ [Proofread and corrected version]";
-// }
-
-// async function translateText(text) {
-//   return "🌍 [Translated version in Hindi]";
-// }
-
-// async function writeText(text) {
-//   return "🪄 [New creative text generated]";
-// }
-
-// async function explainText(text) {
-//   return "🎓 [Explanation of the text in simple terms]";
-// }
-
-const input = document.getElementById("input");
-const output = document.getElementById("output");
-
-document.querySelectorAll("button").forEach(btn => {
+document.querySelectorAll("button").forEach((btn) => {
   btn.addEventListener("click", async () => {
     const action = btn.getAttribute("data-action");
-    const text = input.value.trim();
-    if (!text) return alert("Enter some text first!");
+    const text = inputEl.value.trim();
+    if (!text) return alert("Please enter some text first!");
 
-    output.textContent = "⏳ Processing with " + action + "...";
+    outputEl.textContent = `⏳ Running ${action}...`;
 
     try {
+      const ai = chrome.ai || {};
       let result = "";
 
-      switch (action) {
-        case "summarize":
-          result = await summarizeText(text);
-          break;
-        case "rewrite":
-          result = await rewriteText(text);
-          break;
-        case "proofread":
-          result = await proofreadText(text);
-          break;
-        case "translate":
-          result = await translateText(text);
-          break;
-        case "write":
-          result = await writeText(text);
-          break;
-        case "prompt":
-          result = await explainText(text);
-          break;
-        default:
-          result = "❌ Unknown action.";
+      // ---- CASE 1: Chrome has specific API (future-proof)
+      if (ai[action]) {
+        const instance = await ai[action].create();
+        switch (action) {
+          case "summarizer":
+            result = await instance.summarize(text);
+            break;
+          case "rewriter":
+            result = await instance.rewrite(text);
+            break;
+          case "proofreader":
+            const correction = await instance.proofread(text);
+            result = correction.correctedText;
+            break;
+          case "translator":
+            result = await instance.translate(text, "en", "es");
+            break;
+          case "writer":
+            result = await instance.write(text);
+            break;
+          default:
+            result = "❌ Unknown action";
+        }
+        instance.destroy?.();
+
+      // ---- CASE 2: Fallback using prompt API (works today)
+      } else if (ai.prompt?.create) {
+        const session = await ai.prompt.create();
+        const instruction = makePromptInstruction(action, text);
+        result = await session.prompt(instruction);
+        session.destroy?.();
+
+      } else {
+        result = "⚠️ chrome.ai APIs unavailable. Please enable flags or use Chrome Canary.";
       }
 
-      output.textContent = "✅ Result:\n\n" + result;
+      outputEl.textContent = result;
     } catch (err) {
       console.error(err);
-      output.textContent = "⚠️ Error: " + err.message;
+      outputEl.textContent = "⚠️ Error: " + err.message;
     }
   });
 });
 
-
-// --- ✅ Actual Chrome Built-In AI API Implementations ---
-async function summarizeText(text) {
-  const summarizer = await chrome.ai.summarizer.create();
-  return await summarizer.summarize(text);
-}
-
-async function rewriteText(text) {
-  const rewriter = await chrome.ai.rewriter.create();
-  return await rewriter.rewrite(text);
-}
-
-async function proofreadText(text) {
-  const proofreader = await chrome.ai.proofreader.create();
-  const result = await proofreader.proofread(text);
-  return result.correctedText || "No corrections found.";
-}
-
-async function translateText(text) {
-  const translator = await chrome.ai.translator.create();
-  return await translator.translate(text, "en", "hi"); // English → Hindi
-}
-
-async function writeText(text) {
-  const writer = await chrome.ai.writer.create();
-  return await writer.write(`Generate creative content about: ${text}`);
-}
-
-async function explainText(text) {
-  const session = await chrome.ai.prompt.create();
-  return await session.prompt(`Explain in simple words: ${text}`);
+// Helper: build instruction for prompt fallback
+function makePromptInstruction(action, text) {
+  switch (action) {
+    case "summarize":
+      return `Summarize this text concisely:\n\n${text}`;
+    case "rewrite":
+      return `Rewrite this text for better clarity and tone:\n\n${text}`;
+    case "proofread":
+      return `Proofread and correct grammar and spelling in this text:\n\n${text}`;
+    case "translate":
+      return `Translate this text to Spanish:\n\n${text}`;
+    case "write":
+      return `Write a creative paragraph based on this idea:\n\n${text}`;
+    case "prompt":
+      return `Explain this text simply:\n\n${text}`;
+    default:
+      return text;
+  }
 }
